@@ -1,25 +1,53 @@
-const http = require('http');
-
-const data = [
-    {id: 1, name: "jan"},
-    {id: 2, name: "khan"},
-    {id: 3, name: "baba"},
-]
+const http = require("http");
+const users = [
+  { id: 1, name: "jan" },
+  { id: 2, name: "khan" },
+  { id: 3, name: "baba" },
+];
 
 const server = http.createServer((request, response) => {
-    const {headers, url, method} = request
-    //console.log("Headers ===>", headers, "Url===>", url, "Method ===> ", method);
-    if (method === "POST" || method === "GET") {
-        response.setHeader('content-Type', 'application/json')
-        response.setHeader('X-Powered-By', 'Node.js')
-        //response.write("<h2>This is just for testing</h2>")
+  const { method, url } = request
+
+  let body = []
+  request.on('data', chunk => {
+    body.push(chunk)
+  }).on('end', () => {
+    body = Buffer.concat(body).toString();
+
+    let status = 404;
+    const responses = {
+      success: false,
+      data: null
+    };
+
+    if (method === "GET" && url === "/users") {
+      status = 200;
+      responses.success = true;
+      responses.data = users
+    } else if (method === "POST" && url === "/users") {
+      const { id, name } = JSON.parse(body)
+      if (!id || !name) {
+        status = 400;
+      } else {
+        users.push({ id, name });
+        status = 201;
+        responses.success = true;
+        responses.data = users;
+        responses.countUsers = Object.keys(responses.data).length;
+      }
+
     }
-    response.end(JSON.stringify({
-        success: true,
-        data: data,
-    }));
+
+    response.writeHead(status, {
+      "Content-Type": "application/json",
+    });
+    response.end(JSON.stringify(responses))
+
+  })
+
+
 });
 
 const PORT = 5000;
 
-server.listen(PORT, console.log(`Server running on port ${PORT}`))
+server.listen(PORT, console.log(`Server running on port: http://localhost:${PORT}`));
